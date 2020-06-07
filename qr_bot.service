@@ -1,0 +1,14 @@
+[Unit]
+Description=QR bot service
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+User={username}
+WorkingDirectory=/home/bots/qr_bot
+ExecStart=python3.7 /home/bots/qr_bot/main.py
+
+[Install]
+WantedBy=multi-user.target
