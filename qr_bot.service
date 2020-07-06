@@ -7,8 +7,8 @@ Type=simple
 Restart=always
 RestartSec=10
 User={username}
-WorkingDirectory=/home/bots/qr_bot
-ExecStart=python3.7 /home/bots/qr_bot/main.py
+WorkingDirectory=/home/bots/fastqr_bot
+ExecStart=/usr/bin/python3.7 /home/bots/fastqr_bot/main.py
 
 [Install]
 WantedBy=multi-user.target
