@@ -2,4 +2,4 @@ python-telegram-bot
 myqr
 imageio
 numpy
-Pillow>=6.2.2
+Pillow

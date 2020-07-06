@@ -20,7 +20,7 @@ def make_qrfile(text, photo = None):
     filename = datetime.datetime.utcnow().strftime('img/%Y%m%d_%H%M%S.%f')[:-3]+ '.png'
 
     # https://github.com/sylnsfar/qrcode
-    run_string = f'myqr {text} -n {filename}' if photo is None else f'myqr {text} -n {filename} -p {photo} -c'
+    run_string = f'myqr {text} -n {filename}' if photo is None else f'myqr {text} -n {filename} -p {photo} -c -con 1.2'
     os.system(run_string)
 
     return filename
@@ -67,7 +67,7 @@ def makeqr_text(update, context):
         #send qr image
         update.message.reply_photo(photo=open(qr_filename, 'rb'))
     else:
-        logger.info(f"User {user.first_name} has sended wrong text {'none' if text == None else text}")
+        logger.info(f"User {user.first_name} has sended wrong text {'none' if text is None else text}")
         update.message.reply_text(error_msg, parse_mode=ParseMode.MARKDOWN)
 
 def error(update, context):
