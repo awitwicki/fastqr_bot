@@ -2,3 +2,5 @@ img/
 covers/
 __pycache__/
 log.txt
+
+stats.json

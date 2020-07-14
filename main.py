@@ -5,15 +5,19 @@ from telegram import ParseMode
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters)
 import datetime
 from logs import logger
+from stats_logger import StatsLogger
 
 # t.me/fastqr_bot
 token ='TELEGRAM BOT TOKEN'
+admin_id = 888888888888 #Your telegram id
+
+stats_logger = StatsLogger('stats.json')
 
 #regex for match text to qr
 regex_url = "^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$"
 
-start_msg = 'Привет, меня зовут @fastqr\\_bot, я помогу тебе быстро и просто создать красивые qr коды.\n\nДля создания простого qr-кода - напиши мне ссылку на любой веб ресурс (например `github.com` или `https://github.com`)\n\n**Допускается максимальная длина ссылки 400 символов латинницей**\n\nДля создания qr-кода с картинкой в фоне необходимо прислать в одном сообщении картинку с описанием (в описании картинки просто впиши ссылку)'
-error_msg = 'Допускаются только ссылки на любой веб ресурс\nнапример (`github.com` или `https://github.com`).\n**Максимальная длина ссылки 400 символов латинницей.**'
+start_msg = 'Привет, меня зовут @fastqr\\_bot, я помогу тебе быстро и просто создать красивые qr коды.\n\nДля создания простого qr-кода - напиши мне ссылку на любой веб ресурс, например:\n`github.com` или\n`https://github.com`\n\n**Допускается максимальная длина ссылки 400 символов латинницей.**\n\nДля создания qr-кода с картинкой в фоне необходимо прислать в одном сообщении картинку с описанием (в описании картинки просто впиши ссылку)\n\nСсылка на гитхаб github.com/awitwicki/fastqr\\_bot'
+error_msg = 'Допускаются только ссылки на любой веб ресурс, например:\n`github.com` или\n`https://github.com`\n\n**Максимальная длина ссылки 400 символов латинницей.**'
 error_msg_photo = 'Для создания qr-кода с картинкой в фоне необходимо прислать в одном сообщении картинку с описанием (в описании картинки просто впиши ссылку)'
 
 def make_qrfile(text, photo = None):
@@ -27,13 +31,29 @@ def make_qrfile(text, photo = None):
 
 def start(update, context):
     user = update.message.from_user
+    stats_logger.new_request(user)
     logger.info(f"{user.first_name} has started bot")
     update.message.reply_photo(photo=open('logo.jpg', 'rb'), caption = start_msg, parse_mode=ParseMode.MARKDOWN)
+
+def stats(update, context):
+    user = update.message.from_user
+
+    #allow access only to You
+    if user.id == admin_id:
+        users, stats_data = stats_logger.get_top()
+
+        return_string = f'**Total Users {users}**\n'
+        for day in stats_data:
+            return_string += f'\n`{day[0]}` - {day[1]}'
+
+        update.message.reply_text(text = return_string, parse_mode=ParseMode.MARKDOWN)
+
 
 def makeqr_photo(update, context):
     global regex_url
     user = update.message.from_user
     text = update.message.caption
+    stats_logger.new_request(user)
 
     #check antiflood message length and match regex filter
     if text and len(text) < 400 and re.match(regex_url, text):
@@ -56,6 +76,7 @@ def makeqr_photo(update, context):
 def makeqr_text(update, context):
     user = update.message.from_user
     text = update.message.text
+    stats_logger.new_request(user)
 
     #check antiflood message length and match regex filter
     if text and len(text) < 400 and re.match(regex_url, text):
@@ -95,6 +116,7 @@ def main():
     # message handlers
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", start))
+    dp.add_handler(CommandHandler("stats", stats))
     dp.add_handler(MessageHandler(Filters.text, makeqr_text))
     dp.add_handler(MessageHandler(Filters.photo, makeqr_photo))
 
