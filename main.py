@@ -21,7 +21,7 @@ error_msg = 'Допускаются только ссылки на любой в
 error_msg_photo = 'Для создания qr-кода с картинкой в фоне необходимо прислать в одном сообщении картинку с описанием (в описании картинки просто впиши ссылку)'
 
 def make_qrfile(text, photo = None):
-    filename = datetime.datetime.utcnow().strftime('img/%Y%m%d_%H%M%S.%f')[:-3]+ '.png'
+    filename = datetime.datetime.utcnow().strftime('img/%Y%m%d_%H%M%S.%f')[:-3] + '.png'
 
     # https://github.com/sylnsfar/qrcode
     run_string = f'myqr {text} -n {filename}' if photo is None else f'myqr {text} -n {filename} -p {photo} -c -con 1.2'
@@ -42,7 +42,7 @@ def stats(update, context):
     if user.id == admin_id:
         users, stats_data = stats_logger.get_top()
 
-        return_string = f'**Total Users {users}**\n'
+        return_string = f'**Total Users {users}**\n\n**Active Clicks:**'
         for day in stats_data:
             return_string += f'\n`{day[0]}` - {day[1]}'
 
@@ -52,8 +52,9 @@ def stats(update, context):
 def makeqr_photo(update, context):
     global regex_url
     user = update.message.from_user
-    text = update.message.caption
+    text = update.message.caption.lower()
     stats_logger.new_request(user)
+    os.popen("/usr/bin/influx -username admin -password 'strongpassword123QWE' -database 'wg' -execute 'INSERT bots,botname=fastqr,actiontype=message action=true'")
 
     #check antiflood message length and match regex filter
     if text and len(text) < 400 and re.match(regex_url, text):
@@ -75,8 +76,9 @@ def makeqr_photo(update, context):
 
 def makeqr_text(update, context):
     user = update.message.from_user
-    text = update.message.text
+    text = update.message.text.lower()
     stats_logger.new_request(user)
+    os.popen("/usr/bin/influx -username admin -password 'strongpassword123QWE' -database 'wg' -execute 'INSERT bots,botname=fastqr,actiontype=message action=true'")
 
     #check antiflood message length and match regex filter
     if text and len(text) < 400 and re.match(regex_url, text):

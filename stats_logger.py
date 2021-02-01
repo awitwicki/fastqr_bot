@@ -41,7 +41,7 @@ class StatsLogger:
         else:
             self.stats['days'][date_today] += 1
 
-        self.save_to_file()
+        self.save()
 
     def get_top(self):
         users_count = len(self.stats['users'])
