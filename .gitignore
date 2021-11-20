@@ -3,4 +3,5 @@ covers/
 __pycache__/
 log.txt
 
-stats.json
+# docker files
+.env

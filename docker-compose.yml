@@ -1,0 +1,10 @@
+version: "3.3"
+services:
+  fastqrbot:
+    build: .
+    image: fastqrbot
+    env_file:
+    - .env
+    container_name: fastqrbot-container
+    restart: always
+    network_mode: host

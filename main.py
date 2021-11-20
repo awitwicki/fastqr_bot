@@ -1,17 +1,15 @@
-# -*- coding: utf-8 -*-
 import os
 import re
+import requests
 from telegram import ParseMode
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters)
 import datetime
 from logs import logger
-from stats_logger import StatsLogger
+from amzqr import amzqr
 
 # t.me/fastqr_bot
-token ='TELEGRAM BOT TOKEN'
-admin_id = 888888888888 #Your telegram id
-
-stats_logger = StatsLogger('stats.json')
+bot_token = os.getenv('FASTQR_TOKEN')
+influx_query_url = os.getenv('FASTQR_INFLUX_QUERY')
 
 #regex for match text to qr
 regex_url = "^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$"
@@ -20,41 +18,47 @@ start_msg = 'Привет, меня зовут @fastqr\\_bot, я помогу т
 error_msg = 'Допускаются только ссылки на любой веб ресурс, например:\n`github.com` или\n`https://github.com`\n\n**Максимальная длина ссылки 400 символов латинницей.**'
 error_msg_photo = 'Для создания qr-кода с картинкой в фоне необходимо прислать в одном сообщении картинку с описанием (в описании картинки просто впиши ссылку)'
 
+
+def influx_query(query_str: str):
+    if influx_query_url:
+        try:
+            url = influx_query_url
+            headers = {'Content-Type': 'application/Text'}
+
+            x = requests.post(url, data=query_str.encode('utf-8'), headers=headers)
+        except Exception as e:
+            print(e)
+
+
 def make_qrfile(text, photo = None):
     filename = datetime.datetime.utcnow().strftime('img/%Y%m%d_%H%M%S.%f')[:-3] + '.png'
 
-    # https://github.com/sylnsfar/qrcode
-    run_string = f'myqr {text} -n {filename}' if photo is None else f'myqr {text} -n {filename} -p {photo} -c -con 1.2'
-    os.system(run_string)
+    version, level, qr_name = amzqr.run(
+        text,
+        version=1,
+        level='H',
+        picture=photo,
+        colorized=True,
+        contrast=1.0,
+        brightness=1.0,
+        save_name=filename,
+        save_dir=os.getcwd()
+    )
 
     return filename
 
+
 def start(update, context):
     user = update.message.from_user
-    stats_logger.new_request(user)
     logger.info(f"{user.first_name} has started bot")
     update.message.reply_photo(photo=open('logo.jpg', 'rb'), caption = start_msg, parse_mode=ParseMode.MARKDOWN)
-
-def stats(update, context):
-    user = update.message.from_user
-
-    #allow access only to You
-    if user.id == admin_id:
-        users, stats_data = stats_logger.get_top()
-
-        return_string = f'**Total Users {users}**\n\n**Active Clicks:**'
-        for day in stats_data:
-            return_string += f'\n`{day[0]}` - {day[1]}'
-
-        update.message.reply_text(text = return_string, parse_mode=ParseMode.MARKDOWN)
 
 
 def makeqr_photo(update, context):
     global regex_url
     user = update.message.from_user
     text = update.message.caption.lower()
-    stats_logger.new_request(user)
-    os.popen("/usr/bin/influx -username admin -password 'strongpassword123QWE' -database 'wg' -execute 'INSERT bots,botname=fastqr,actiontype=message action=true'")
+    influx_query('bots,botname=fastqr,actiontype=message action=true')
 
     #check antiflood message length and match regex filter
     if text and len(text) < 400 and re.match(regex_url, text):
@@ -74,11 +78,11 @@ def makeqr_photo(update, context):
         replytext = f'{error_msg_photo}\n\n{error_msg}'
         update.message.reply_text(replytext, parse_mode=ParseMode.MARKDOWN)
 
+
 def makeqr_text(update, context):
     user = update.message.from_user
     text = update.message.text.lower()
-    stats_logger.new_request(user)
-    os.popen("/usr/bin/influx -username admin -password 'strongpassword123QWE' -database 'wg' -execute 'INSERT bots,botname=fastqr,actiontype=message action=true'")
+    influx_query('bots,botname=fastqr,actiontype=message action=true')
 
     #check antiflood message length and match regex filter
     if text and len(text) < 400 and re.match(regex_url, text):
@@ -93,9 +97,11 @@ def makeqr_text(update, context):
         logger.info(f"User {user.first_name} has sended wrong text {'none' if text is None else text}")
         update.message.reply_text(error_msg, parse_mode=ParseMode.MARKDOWN)
 
+
 def error(update, context):
     """Log Errors caused by Updates."""
     logger.warning('Update "%s" caused error "%s"', update, context.error)
+
 
 def main():
     logger.info(f"Application started")
@@ -110,7 +116,7 @@ def main():
         logger.info(f"Created dir /covers")
 
     #setup telegram bot
-    updater = Updater(token, use_context=True)
+    updater = Updater(bot_token, use_context=True)
 
     # Get the dispatcher to register handlers
     dp = updater.dispatcher
@@ -118,7 +124,6 @@ def main():
     # message handlers
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("help", start))
-    dp.add_handler(CommandHandler("stats", stats))
     dp.add_handler(MessageHandler(Filters.text, makeqr_text))
     dp.add_handler(MessageHandler(Filters.photo, makeqr_photo))
 
@@ -134,6 +139,7 @@ def main():
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.
     updater.idle()
+
 
 if __name__ == '__main__':
     main()

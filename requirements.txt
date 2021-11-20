@@ -1,5 +1,5 @@
-python-telegram-bot
-myqr
-imageio
 numpy
-Pillow
+python-telegram-bot
+requests
+imageio==1.5
+Pillow==8.1.1
