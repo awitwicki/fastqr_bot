@@ -3,6 +3,9 @@ services:
   fastqrbot:
     build: .
     image: fastqrbot
+    volumes:
+      - ./img:/app/img
+      - ./covers:/app/covers
     env_file:
     - .env
     container_name: fastqrbot-container

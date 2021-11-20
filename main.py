@@ -106,15 +106,6 @@ def error(update, context):
 def main():
     logger.info(f"Application started")
 
-    # create folders
-    if not os.path.exists('img'):
-        os.makedirs('img')
-        logger.info(f"Created dir /img")
-
-    if not os.path.exists('covers'):
-        os.makedirs('covers')
-        logger.info(f"Created dir /covers")
-
     #setup telegram bot
     updater = Updater(bot_token, use_context=True)
 

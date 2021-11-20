@@ -1,5 +1,5 @@
-img/
-covers/
+img/*.png
+covers/*.jpg
 __pycache__/
 log.txt
 
