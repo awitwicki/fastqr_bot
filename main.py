@@ -11,12 +11,11 @@ from amzqr import amzqr
 bot_token = os.getenv('FASTQR_TOKEN')
 influx_query_url = os.getenv('FASTQR_INFLUX_QUERY')
 
-#regex for match text to qr
-regex_url = "^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$"
+explain_msg = 'Допускаются только символы латинницы\n`0~9 a~z, A~Z`\nи\n`· , . : ; + - * / \ ~ ! # $ % ^ &` \n\n**Максимальная длина текста - 400 символов.**'
 
-start_msg = 'Привет, меня зовут @fastqr\\_bot, я помогу тебе быстро и просто создать красивые qr коды.\n\nДля создания простого qr-кода - напиши мне ссылку на любой веб ресурс, например:\n`github.com` или\n`https://github.com`\n\n**Допускается максимальная длина ссылки 400 символов латинницей.**\n\nДля создания qr-кода с картинкой в фоне необходимо прислать в одном сообщении картинку с описанием (в описании картинки просто впиши ссылку)\n\nСсылка на гитхаб github.com/awitwicki/fastqr\\_bot'
-error_msg = 'Допускаются только ссылки на любой веб ресурс, например:\n`github.com` или\n`https://github.com`\n\n**Максимальная длина ссылки 400 символов латинницей.**'
-error_msg_photo = 'Для создания qr-кода с картинкой в фоне необходимо прислать в одном сообщении картинку с описанием (в описании картинки просто впиши ссылку)'
+start_msg = f'Привет, меня зовут @fastqr\\_bot, я помогу тебе быстро и просто создать красивые qr коды.\n\nДля создания простого qr-кода - просто напиши мне \n\n{explain_msg}\n\nСсылка на гитхаб github.com/awitwicki/fastqr\\_bot'
+
+error_msg_photo = 'Для создания qr-кода с картинкой в фоне необходимо прислать в одном сообщении картинку с описанием (в описании картинки просто впиши текст)'
 
 
 def influx_query(query_str: str):
@@ -54,6 +53,11 @@ def start(update, context):
     update.message.reply_photo(photo=open('logo.jpg', 'rb'), caption = start_msg, parse_mode=ParseMode.MARKDOWN)
 
 
+# Check if text is ascii
+def is_ascii(text: str) -> bool:
+    return all(ord(c) < 128 for c in text)
+
+
 def makeqr_photo(update, context):
     global regex_url
     user = update.message.from_user
@@ -61,7 +65,7 @@ def makeqr_photo(update, context):
     influx_query('bots,botname=fastqr,actiontype=message action=true')
 
     #check antiflood message length and match regex filter
-    if text and len(text) < 400 and re.match(regex_url, text):
+    if text and len(text) < 400 and is_ascii(text):
         logger.info(f"User {user.first_name} has sended photo with caption {text}")
 
         #download photo
@@ -75,7 +79,7 @@ def makeqr_photo(update, context):
         #send qr image
         update.message.reply_photo(photo=open(qr_filename, 'rb'))
     else:
-        replytext = f'{error_msg_photo}\n\n{error_msg}'
+        replytext = f'{error_msg_photo}\n\n{explain_msg}'
         update.message.reply_text(replytext, parse_mode=ParseMode.MARKDOWN)
 
 
@@ -85,7 +89,7 @@ def makeqr_text(update, context):
     influx_query('bots,botname=fastqr,actiontype=message action=true')
 
     #check antiflood message length and match regex filter
-    if text and len(text) < 400 and re.match(regex_url, text):
+    if text and len(text) < 400 and is_ascii(text):
         logger.info(f"User {user.first_name} has sended text {text}")
 
         #make qr
@@ -95,7 +99,7 @@ def makeqr_text(update, context):
         update.message.reply_photo(photo=open(qr_filename, 'rb'))
     else:
         logger.info(f"User {user.first_name} has sended wrong text {'none' if text is None else text}")
-        update.message.reply_text(error_msg, parse_mode=ParseMode.MARKDOWN)
+        update.message.reply_text(explain_msg, parse_mode=ParseMode.MARKDOWN)
 
 
 def error(update, context):
